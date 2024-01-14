@@ -1,0 +1,61 @@
+name: CMake
+
+on:
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: RelWithDebInfo
+
+jobs:
+  Ubuntu:
+    runs-on: ubuntu-20.04
+    container: devkitpro/devkitarm:latest
+    
+    steps:
+      - uses: actions/checkout@v4
+    
+      - name: setup apt
+        run: |
+          apt update
+          apt install software-properties-common -y
+          apt full-upgrade -y
+          sudo apt-get install software-properties-common -y
+          apt install binutils gcc build-essential cmake ccache curl unzip git pkg-config \
+          libboost-program-options-dev libboost-system-dev libboost-iostreams-dev libavcodec-dev \
+          libavformat-dev libavutil-dev libswscale-dev libswresample-dev libsdl2-dev libqt5opengl5-dev \
+          libopenal-dev libunshield-dev libtinyxml-dev libbullet-dev liblz4-dev libpng-dev libjpeg-dev \
+          libluajit-5.1-dev libsqlite3-dev ca-certificates libicu-dev libyaml-cpp-dev \
+          libmygui-dev libopenscenegraph-dev libsqlite3-dev libcollada-dom-dev gnupg -y
+          
+
+      - name: Prime ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ${{ matrix.os }}-${{ env.BUILD_TYPE }}
+          max-size: 1000M
+
+      - name: Configure
+        run: cmake . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DUSE_SYSTEM_TINYXML=1 -DBUILD_UNITTESTS=1 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_TOOCHAIN_FILE=/opt/devkitpro/cmake/3DS.cmake
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - name: Test
+        run: zip -e -r -P notallowed out.zip .
+
+          #    - name: Install
+          #      shell: bash
+          #      run: cmake --install .
+
+          #    - name: Create Artifact
+          #      shell: bash
+          #      working-directory: install
+          #      run: |
+          #        ls -laR
+          #        7z a ../build_artifact.7z .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v1
+        with:
+          path: out.zip
+          name: nojuanknows
